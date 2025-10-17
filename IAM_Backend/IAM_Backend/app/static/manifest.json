@@ -1,0 +1,12 @@
+{
+  "name": "UPY Center – Secure Solutions",
+  "short_name": "UPY Secure",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0b2a3c",
+  "theme_color": "#0b2a3c",
+  "icons": [
+    { "src": "favicon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

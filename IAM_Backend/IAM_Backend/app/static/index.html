@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>UPY Center – Inicio</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    // Guard: decide a dónde ir según sesión local
+    const ok = localStorage.getItem('auth_ok') === 'true';
+    const exp = parseInt(localStorage.getItem('auth_expires')||'0',10);
+    const now = Date.now();
+    location.replace(ok && now < exp ? 'app.html' : 'login.html');
+  </script>
+</head>
+<body></body>
+</html>
