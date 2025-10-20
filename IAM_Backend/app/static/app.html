@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel • UPY Center</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .layout{max-width:1100px;margin:20px auto;padding:0 12px}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:900px){.grid{grid-template-columns: 320px 1fr}}
+    .card h3{margin:0 0 8px}
+    .pill{display:inline-block;background:#e2e8f0;color:#0b2a3c;border-radius:999px;padding:4px 10px;font-weight:600}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:10px;background:#f1f5f9;cursor:pointer;user-select:none}
+    .tab.active{background:#0b2a3c;color:#fff}
+    .section{display:none}
+    .section.active{display:block}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left}
+    .camera-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+    .cam{position:relative;border-radius:10px;overflow:hidden;background:#0b2a3c}
+    .cam .title{position:absolute;top:6px;left:8px;color:#fff;background:rgba(0,0,0,.45);padding:3px 6px;border-radius:8px;font-weight:700}
+    .cam .nosignal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;background:repeating-linear-gradient(0deg,#0b2a3c 0,#0b2a3c 2px,#0d3146 2px,#0d3146 4px);animation:static 1s infinite linear;}
+    @keyframes static{0%{filter:contrast(100%)}50%{filter:contrast(130%)}100%{filter:contrast(100%)}}
+    .cam iframe,.cam img{width:100%;height:220px;border:0;display:block}
+    .pager{display:flex;gap:8px;align-items:center}
+    .muted{color:#64748b}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img class="logo" src="favicon-512.png" alt="UPY Center">
+    <div>
+      <div class="title">UPY CENTER</div>
+      <div class="subtitle">Panel</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- Contenido principal -->
+    <div class="card">
+        <div class="tabs" id="tabs">
+          <button class="tab" type="button" data-target="sec-overview">Resumen</button>
+          <button class="tab" type="button" data-target="sec-cams">Cámaras</button>
+          <button class="tab" type="button" data-target="sec-logs">Logs</button>
+          <button class="tab" type="button" data-target="sec-db">Data Base</button>
+          <button class="tab" type="button" data-target="sec-ac">Access Control</button>
+        </div>
+        <div style="height:10px"></div>
+
+        <section id="sec-overview" class="section active">
+          <h3>Resumen</h3>
+          <div style="display:flex;gap:14px;align-items:center">
+            <img id="avatar" src="avatar.png" alt="avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover">
+            <div>
+              <div style="font-weight:700" id="name">—</div>
+              <div id="email" class="muted">—</div>
+              <div><span id="role" class="pill">—</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="sec-cams" class="section">
+          <h3>Cámaras (solo R-MON / R-ADM)</h3>
+          <div class="pager"><button id="camsPrev" class="btn btn-ghost" type="button">◀</button><div class="muted" id="camsInfo">—</div><button id="camsNext" class="btn btn-ghost" type="button">▶</button></div>
+          <div style="height:8px"></div>
+          <div id="cams-grid" class="camera-grid"></div>
+        </section>
+
+        <section id="sec-logs" class="section">
+          <h3>Logs recientes (solo R-MON / R-ADM)</h3>
+          <div id="logs"></div>
+        </section>
+
+        <section id="sec-db" class="section">
+          <h3>Data Base (solo R-IM / R-ADM)</h3>
+          <div style="height:6px"></div>
+          <div>
+            <details open>
+            <summary style="cursor:pointer;font-weight:700">Usuarios</summary>
+            <div style="height:6px"></div>
+            <form id="userForm" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
+              <input class="input" style="width:120px" placeholder="UID" id="f_uid">
+              <input class="input" style="width:160px" placeholder="Email" id="f_email">
+              <input class="input" style="width:120px" placeholder="Nombre" id="f_nombre">
+              <input class="input" style="width:120px" placeholder="Apellido" id="f_apellido">
+              <input class="input" style="width:100px" placeholder="Rol" id="f_rol" value="R-EMP">
+              <input class="input" style="width:120px" placeholder="Password" id="f_password" type="password">
+              <button class="btn" type="submit">Agregar</button>
+            </form>
+            <div style="height:8px"></div>
+            <table>
+              <thead><tr><th>UID</th><th>Nombre</th><th>Apellido</th><th>Email</th><th>Rol</th><th>Estado</th><th>QR Status</th><th>Card ID</th><th>Último acceso</th></tr></thead>
+              <tbody id="db-users"></tbody>
+            </table>
+            </details>
+          </div>
+          <div style="height:16px"></div>
+          <div>
+            <details>
+            <summary style="cursor:pointer;font-weight:700">Auth Sessions</summary>
+            <table>
+              <thead><tr><th>Session ID</th><th>UID</th><th>State</th><th>Creado</th><th>Expira</th></tr></thead>
+              <tbody id="db-sessions"></tbody>
+            </table>
+            </details>
+          </div>
+          <div style="height:16px"></div>
+          <div>
+            <details>
+            <summary style="cursor:pointer;font-weight:700">Eventos</summary>
+            <div class="muted" style="font-size:.9rem">Últimos 300</div>
+            <table>
+              <thead><tr><th>ID</th><th>Tipo</th><th>Actor</th><th>Source</th><th>Fecha</th><th>Contexto</th></tr></thead>
+              <tbody id="db-events"></tbody>
+            </table>
+            </details>
+          </div>
+
+          <div style="height:16px"></div>
+          <div>
+            <details>
+              <summary style="cursor:pointer;font-weight:700">Dispositivos: Cámaras</summary>
+              <table>
+                <thead><tr><th>ID</th><th>Nombre</th><th>IP</th><th>URL</th><th>Status</th><th>Ubicación</th><th>Último</th></tr></thead>
+                <tbody id="db-cams"></tbody>
+              </table>
+            </details>
+          </div>
+
+          <div style="height:16px"></div>
+          <div>
+            <details>
+              <summary style="cursor:pointer;font-weight:700">Dispositivos: QR Scanners</summary>
+              <table>
+                <thead><tr><th>ID</th><th>Nombre</th><th>IP</th><th>URL</th><th>Status</th><th>Ubicación</th><th>Último</th></tr></thead>
+                <tbody id="db-qr"></tbody>
+              </table>
+            </details>
+          </div>
+
+          <div style="height:16px"></div>
+          <div>
+            <details>
+              <summary style="cursor:pointer;font-weight:700">Dispositivos: NFC</summary>
+              <table>
+                <thead><tr><th>ID</th><th>Nombre</th><th>IP</th><th>Puerto</th><th>Status</th><th>Ubicación</th><th>Último</th></tr></thead>
+                <tbody id="db-nfc"></tbody>
+              </table>
+            </details>
+          </div>
+        </section>
+
+        <section id="sec-ac" class="section">
+          <h3>Punto de acceso (solo R-AC / R-ADM)</h3>
+          <div id="acbox" class="muted">Esperando autenticaciones...</div>
+        </section>
+    </div>
+  </div>
+
+  <div class="footer">© UPY Center – Secure Solutions</div>
+
+  <!-- Temporizador de sesión fijo en esquina -->
+  <div id="cornerTimer" style="position:fixed;top:14px;right:14px;z-index:1000;background:#0b2a3c;color:#fff;padding:6px 10px;border-radius:10px;font-weight:700">
+    <span style="opacity:.8;font-weight:500">Expira:</span> <span id="expires">--:--</span>
+  </div>
+
+  <!-- Bloque de usuario + logout en esquina opuesta -->
+  <div id="cornerUser" style="position:fixed;top:14px;left:14px;z-index:1000;background:#f1f5f9;color:#0b2a3c;padding:8px 10px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <img id="cornerAvatar" src="avatar.png" alt="avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover">
+      <div id="cornerName" style="font-weight:700;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+    </div>
+    <button id="logout" class="btn btn-ghost" type="button" style="width:100%">Cerrar sesión</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
