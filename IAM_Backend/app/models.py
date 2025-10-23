@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, F
 from sqlalchemy.sql import func
 from .db import Base
 from sqlalchemy.orm import relationship
+from .time_utils import now_cst
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -15,27 +16,27 @@ class Usuario(Base):
     qr_value_hash = Column(String, nullable=True)   # Argon2 hash
     qr_card_id = Column(String, nullable=True)
     qr_status = Column(String, nullable=True, default="active")
-    qr_issued_at = Column(DateTime(timezone=True), server_default=func.now())
+    qr_issued_at = Column(DateTime(timezone=True), default=now_cst)
     qr_revoked_at = Column(DateTime(timezone=True), nullable=True)
     mfa_enabled = Column(Boolean, default=False)
     totp_secret = Column(String, nullable=True)
     ultimo_acceso = Column(DateTime(timezone=True), nullable=True)
-    creado_en = Column(DateTime(timezone=True), server_default=func.now())
-    actualizado_en = Column(DateTime(timezone=True), onupdate=func.now())
+    creado_en = Column(DateTime(timezone=True), default=now_cst)
+    actualizado_en = Column(DateTime(timezone=True), onupdate=now_cst)
 
 class AuthSession(Base):
     __tablename__ = "auth_sessions"
     session_id = Column(String, primary_key=True)
     uid = Column(String, ForeignKey("usuarios.uid"), nullable=True)
     state = Column(String, default="pending")  # pending, mfa_required, completed, failed, expired
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), default=now_cst)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     context = Column(JSON, nullable=True)
 
 class Evento(Base):
     __tablename__ = "eventos"
     id = Column(Integer, primary_key=True, index=True)
-    ts = Column(DateTime(timezone=True), server_default=func.now())
+    ts = Column(DateTime(timezone=True), default=now_cst)
     event = Column(String, nullable=False)
     actor_uid = Column(String, nullable=True)
     source = Column(String, nullable=True)
@@ -73,3 +74,37 @@ class NFCDevice(Base):
     status = Column(String, nullable=False, default="active")
     location = Column(String, nullable=True)
     last_seen = Column(DateTime(timezone=True), nullable=True)
+
+# Mensajes simples por grupo
+class Mensaje(Base):
+    __tablename__ = "mensajes"
+    msg_id = Column(Integer, primary_key=True, index=True)
+    remitente_uid = Column(String, ForeignKey("usuarios.uid"), nullable=True)
+    grupo = Column(String, nullable=True)
+    contenido = Column(Text, nullable=False)
+    creado_en = Column(DateTime(timezone=True), default=now_cst)
+
+# Claves públicas de dispositivo (ECDH) por usuario para E2E
+class UserDeviceKey(Base):
+    __tablename__ = "user_device_keys"
+    uid = Column(String, ForeignKey("usuarios.uid"), primary_key=True)
+    algo = Column(String, nullable=False, default="ECDH-P256")
+    pub_jwk = Column(Text, nullable=False)  # JSON Web Key (solo público)
+    creado_en = Column(DateTime(timezone=True), default=now_cst)
+
+# Confirmaciones de lectura por mensaje
+class MessageRead(Base):
+    __tablename__ = "mensajes_read"
+    id = Column(Integer, primary_key=True, index=True)
+    msg_id = Column(Integer, ForeignKey("mensajes.msg_id"), nullable=False)
+    uid = Column(String, ForeignKey("usuarios.uid"), nullable=False)
+    read_at = Column(DateTime(timezone=True), default=now_cst)
+
+# Clave de canal (chat) por grupo o DM
+class ChannelKey(Base):
+    __tablename__ = "channel_keys"
+    channel = Column(String, primary_key=True)  # p.ej., IM / Avisos / DM:UID1:UID2 (ordenado)
+    # Mapa uid -> ciphertext (clave de canal cifrada para ese usuario con su self-ECDH)
+    key_map = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=now_cst)
+    updated_at = Column(DateTime(timezone=True), default=now_cst, onupdate=now_cst)

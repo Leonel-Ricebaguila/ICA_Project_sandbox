@@ -2,9 +2,11 @@
 from .db import SessionLocal
 from .models import Usuario
 from .auth import hash_password
+from .time_utils import now_cst
+from .user_qr import assign_qr_to_user
 
 DEFAULT_ADMIN = {
-    "uid": "ADMIN-001",
+    "uid": "ADMIN-1",
     "email": "admin@local",
     "password": "StrongPass123!",
     "nombre": "Admin",
@@ -31,6 +33,10 @@ def ensure_default_admin():
         )
         db.add(u)
         db.commit()
+        try:
+            assign_qr_to_user(DEFAULT_ADMIN["uid"])  # genera QR y PNG por defecto
+        except Exception as e:
+            print("[startup] QR assign failed:", e)
         print("[startup] Default admin created:", DEFAULT_ADMIN["uid"], DEFAULT_ADMIN["email"])
     finally:
         db.close()

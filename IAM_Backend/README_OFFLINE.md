@@ -59,7 +59,7 @@ El servidor sirve los estáticos desde app/static en la raíz (static_url_path="
 7) CLI y QR offline
 -------------------
 Crear usuarios (admin y por rol):
-- python -m app.cli create-admin --uid ADMIN-001 --email admin@local --password StrongPass123!
+- python -m app.cli create-admin --uid ADMIN-1 --email admin@local --password StrongPass123!
 - python -m app.cli create-user --uid MON-001 --email mon1@local --password StrongPass123! --role R-MON
 
 Asignar QR y generar PNG (sin Internet):

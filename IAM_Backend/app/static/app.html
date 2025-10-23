@@ -28,6 +28,42 @@
     .cam iframe,.cam img{width:100%;height:220px;border:0;display:block}
     .pager{display:flex;gap:8px;align-items:center}
     .muted{color:#64748b}
+    /* Chat styles */
+    .chat-list{display:flex;flex-direction:column;gap:8px;min-height:220px;max-height:420px;overflow:auto;padding:8px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px}
+    .chat-row{display:flex}
+    .chat-row.me{justify-content:flex-end}
+    .chat-row.other{justify-content:flex-start}
+    .bubble{max-width:70%;padding:10px 12px;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.05);position:relative}
+    .bubble.me{background:#0b2a3c;color:#fff;border-bottom-right-radius:6px}
+    .bubble.other{background:#ffffff;color:#0b2a3c;border-bottom-left-radius:6px;border:1px solid #e5e7eb}
+    .meta{font-size:.75rem;opacity:.8;margin-top:4px}
+    .bubble .head{font-weight:700;margin-bottom:4px}
+    .bubble .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px;font-size:.78rem;opacity:.85}
+    .bubble .info{cursor:pointer;opacity:.85}
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:2000}
+    .modal.show{display:flex}
+    .modal-card{background:#fff;min-width:320px;max-width:520px;max-height:70vh;overflow:auto;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.25);padding:12px}
+    .modal-card h4{margin:4px 0 8px}
+    .read-item{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e7eb;padding:6px 2px}
+
+    /* CSV icon inside each summary (top-right) */
+    details{ position: relative; }
+    details > summary{ position: relative; padding-right: 30px; }
+    .summary-download{ position:absolute; top:2px; right:0; background:transparent; border:0; padding:0; cursor:pointer }
+    .summary-download:focus{ outline: none; }
+    /* UPY tiny download icon */
+    .upy-dl{ --size:22px; width:var(--size); height:var(--size); position:relative; display:inline-block }
+    .upy-dl-svg{ width:100%; height:100%; transform: rotate(-1800deg) }
+    .upy-dl .ring{ fill:none; stroke:#e2e8f0; stroke-width:4 }
+    .upy-dl .bar{ fill:none; stroke:#0b2a3c; stroke-width:4; stroke-linecap:round; stroke-dasharray:283; stroke-dashoffset:283; transition: stroke-dashoffset .2s linear }
+    /* Arrow should point down despite parent SVG rotation */
+    .upy-dl .arrow{ fill:#0b2a3c; transform: rotate(180deg); transform-origin:50% 50% }
+    .upy-dl .label{ display:none }
+    /* tick (check) on complete */
+    .upy-dl .check{ fill:none; stroke:#16a34a; stroke-width:4; stroke-linecap:round; stroke-linejoin:round;
+      stroke-dasharray:60; stroke-dashoffset:60; opacity:0; transition: stroke-dashoffset .35s ease, opacity .25s ease }
+    .upy-dl.complete .check{ stroke-dashoffset:0; opacity:1 }
+    .upy-dl.complete .arrow{ opacity:0 }
   </style>
 </head>
 <body>
@@ -46,6 +82,7 @@
           <button class="tab" type="button" data-target="sec-overview">Resumen</button>
           <button class="tab" type="button" data-target="sec-cams">Cámaras</button>
           <button class="tab" type="button" data-target="sec-logs">Logs</button>
+          <button class="tab" type="button" data-target="sec-msg">Mensajería</button>
           <button class="tab" type="button" data-target="sec-db">Data Base</button>
           <button class="tab" type="button" data-target="sec-ac">Access Control</button>
         </div>
@@ -80,7 +117,19 @@
           <div style="height:6px"></div>
           <div>
             <details open>
-            <summary style="cursor:pointer;font-weight:700">Usuarios</summary>
+            <summary style="cursor:pointer;font-weight:700">Usuarios
+              <button id="csv-users" class="summary-download" type="button" title="Descargar CSV">
+                <span class="upy-dl" aria-hidden="true">
+                  <svg viewBox="0 0 100 100" class="upy-dl-svg">
+                    <circle class="ring" cx="50" cy="50" r="45"/>
+                    <circle class="bar"  cx="50" cy="50" r="45"/>
+                    <polygon class="arrow" points="50,30 65,50 55,50 55,70 45,70 45,50 35,50"/>
+                    <path class="check" d="M30 52 L45 68 L70 38"/>
+                  </svg>
+                  <div class="label">0%</div>
+                </span>
+              </button>
+            </summary>
             <div style="height:6px"></div>
             <form id="userForm" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end">
               <input class="input" style="width:120px" placeholder="UID" id="f_uid">
@@ -101,7 +150,19 @@
           <div style="height:16px"></div>
           <div>
             <details>
-            <summary style="cursor:pointer;font-weight:700">Auth Sessions</summary>
+            <summary style="cursor:pointer;font-weight:700">Auth Sessions
+              <button id="csv-sessions" class="summary-download" type="button" title="Descargar CSV">
+                <span class="upy-dl" aria-hidden="true">
+                  <svg viewBox="0 0 100 100" class="upy-dl-svg">
+                    <circle class="ring" cx="50" cy="50" r="45"/>
+                    <circle class="bar"  cx="50" cy="50" r="45"/>
+                    <polygon class="arrow" points="50,30 65,50 55,50 55,70 45,70 45,50 35,50"/>
+                    <path class="check" d="M30 52 L45 68 L70 38"/>
+                  </svg>
+                  <div class="label">0%</div>
+                </span>
+              </button>
+            </summary>
             <table>
               <thead><tr><th>Session ID</th><th>UID</th><th>State</th><th>Creado</th><th>Expira</th></tr></thead>
               <tbody id="db-sessions"></tbody>
@@ -111,7 +172,19 @@
           <div style="height:16px"></div>
           <div>
             <details>
-            <summary style="cursor:pointer;font-weight:700">Eventos</summary>
+            <summary style="cursor:pointer;font-weight:700">Eventos
+              <button id="csv-events" class="summary-download" type="button" title="Descargar CSV">
+                <span class="upy-dl" aria-hidden="true">
+                  <svg viewBox="0 0 100 100" class="upy-dl-svg">
+                    <circle class="ring" cx="50" cy="50" r="45"/>
+                    <circle class="bar"  cx="50" cy="50" r="45"/>
+                    <polygon class="arrow" points="50,30 65,50 55,50 55,70 45,70 45,50 35,50"/>
+                    <path class="check" d="M30 52 L45 68 L70 38"/>
+                  </svg>
+                  <div class="label">0%</div>
+                </span>
+              </button>
+            </summary>
             <div class="muted" style="font-size:.9rem">Últimos 300</div>
             <table>
               <thead><tr><th>ID</th><th>Tipo</th><th>Actor</th><th>Source</th><th>Fecha</th><th>Contexto</th></tr></thead>
@@ -123,7 +196,19 @@
           <div style="height:16px"></div>
           <div>
             <details>
-              <summary style="cursor:pointer;font-weight:700">Dispositivos: Cámaras</summary>
+              <summary style="cursor:pointer;font-weight:700">Dispositivos: Cámaras
+                <button id="csv-cams" class="summary-download" type="button" title="Descargar CSV">
+                  <span class="upy-dl" aria-hidden="true">
+                    <svg viewBox="0 0 100 100" class="upy-dl-svg">
+                      <circle class="ring" cx="50" cy="50" r="45"/>
+                      <circle class="bar"  cx="50" cy="50" r="45"/>
+                      <polygon class="arrow" points="50,30 65,50 55,50 55,70 45,70 45,50 35,50"/>
+                      <path class="check" d="M30 52 L45 68 L70 38"/>
+                    </svg>
+                    <div class="label">0%</div>
+                  </span>
+                </button>
+              </summary>
               <table>
                 <thead><tr><th>ID</th><th>Nombre</th><th>IP</th><th>URL</th><th>Status</th><th>Ubicación</th><th>Último</th></tr></thead>
                 <tbody id="db-cams"></tbody>
@@ -134,7 +219,19 @@
           <div style="height:16px"></div>
           <div>
             <details>
-              <summary style="cursor:pointer;font-weight:700">Dispositivos: QR Scanners</summary>
+              <summary style="cursor:pointer;font-weight:700">Dispositivos: QR Scanners
+                <button id="csv-qr" class="summary-download" type="button" title="Descargar CSV">
+                  <span class="upy-dl" aria-hidden="true">
+                    <svg viewBox="0 0 100 100" class="upy-dl-svg">
+                      <circle class="ring" cx="50" cy="50" r="45"/>
+                      <circle class="bar"  cx="50" cy="50" r="45"/>
+                      <polygon class="arrow" points="50,30 65,50 55,50 55,70 45,70 45,50 35,50"/>
+                      <path class="check" d="M30 52 L45 68 L70 38"/>
+                    </svg>
+                    <div class="label">0%</div>
+                  </span>
+                </button>
+              </summary>
               <table>
                 <thead><tr><th>ID</th><th>Nombre</th><th>IP</th><th>URL</th><th>Status</th><th>Ubicación</th><th>Último</th></tr></thead>
                 <tbody id="db-qr"></tbody>
@@ -145,12 +242,55 @@
           <div style="height:16px"></div>
           <div>
             <details>
-              <summary style="cursor:pointer;font-weight:700">Dispositivos: NFC</summary>
+              <summary style="cursor:pointer;font-weight:700">Dispositivos: NFC
+                <button id="csv-nfc" class="summary-download" type="button" title="Descargar CSV">
+                  <span class="upy-dl" aria-hidden="true">
+                    <svg viewBox="0 0 100 100" class="upy-dl-svg">
+                      <circle class="ring" cx="50" cy="50" r="45"/>
+                      <circle class="bar"  cx="50" cy="50" r="45"/>
+                      <polygon class="arrow" points="50,30 65,50 55,50 55,70 45,70 45,50 35,50"/>
+                      <path class="check" d="M30 52 L45 68 L70 38"/>
+                    </svg>
+                    <div class="label">0%</div>
+                  </span>
+                </button>
+              </summary>
               <table>
                 <thead><tr><th>ID</th><th>Nombre</th><th>IP</th><th>Puerto</th><th>Status</th><th>Ubicación</th><th>Último</th></tr></thead>
                 <tbody id="db-nfc"></tbody>
               </table>
             </details>
+          </div>
+        </section>
+
+        <section id="sec-msg" class="section">
+          <h3>Mensajería (E2E)</h3>
+          <div class="muted" style="font-size:.9rem;margin-bottom:8px">Selecciona un grupo fijo o busca por email para DM. Cifrado E2E en cliente.</div>
+          <div style="display:grid;grid-template-columns:280px 1fr;gap:12px">
+            <aside style="border:1px solid #e5e7eb;border-radius:12px;background:#fff;padding:10px">
+              <div style="font-weight:700;margin-bottom:6px">Grupos</div>
+              <div id="msgGroups" style="display:flex;flex-direction:column;gap:6px"></div>
+              <hr>
+              <div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px">Directo <span id="dmDot" style="display:none;width:10px;height:10px;border-radius:50%;background:#22c55e"></span></div>
+              <input id="msgEmail" class="input" placeholder="email@empresa.com">
+              <div style="height:6px"></div>
+              <button id="msgOpenDM" class="btn" type="button" style="width:100%">Abrir chat</button>
+            </aside>
+            <main>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div id="msgTitle" style="font-weight:800">—</div>
+                <div style="display:flex;gap:8px;align-items:center">
+                  <span id="msgStatus" class="muted">—</span>
+                  <button id="msgKeyBtn" class="btn btn-ghost" type="button" title="Definir/actualizar clave E2E" style="background:#e2e8f0;color:#0b2a3c;box-shadow:none">Clave</button>
+                  <button id="msgSyncBtn" class="btn btn-ghost" type="button" title="Rellenar partes faltantes (solo remitente)" style="background:#e2e8f0;color:#0b2a3c;box-shadow:none">Sincronizar</button>
+                </div>
+              </div>
+              <div id="msgList" class="chat-list"></div>
+              <div class="chat-input" style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                <input id="msgText" class="input" placeholder="Escribe un mensaje... (Enter para enviar, Shift+Enter salto de línea)" style="flex:1">
+                <button id="msgSend" class="btn" type="button">Enviar</button>
+              </div>
+            </main>
           </div>
         </section>
 
@@ -175,6 +315,17 @@
       <div id="cornerName" style="font-weight:700;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
     </div>
     <button id="logout" class="btn btn-ghost" type="button" style="width:100%">Cerrar sesión</button>
+  </div>
+
+  <!-- Modal de lecturas -->
+  <div id="readModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="readTitle">
+    <div class="modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h4 id="readTitle">Leído por</h4>
+        <button id="readClose" class="btn btn-ghost" type="button" style="background:#e2e8f0;color:#0b2a3c;box-shadow:none">Cerrar</button>
+      </div>
+      <div id="readList"></div>
+    </div>
   </div>
 
   <script src="app.js"></script>

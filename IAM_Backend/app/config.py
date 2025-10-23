@@ -1,6 +1,9 @@
 import os
 
 class Config:
+    # --------- JWT / App secret ----------
+    SECRET_KEY = os.getenv("SECRET_KEY", "changeme_replace_with_random_32b")
+    JWT_EXP_SECONDS = int(os.getenv("JWT_EXP_SECONDS", "3600"))
     # --------- Base de datos ----------
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./iam.db")
 
@@ -34,5 +37,12 @@ class Config:
         "CAM_URLS",
         "Cam 1|/camera_sim/1,Cam 2|/camera_sim/2,Cam 3|/camera_sim/3,Cam 4|/camera_sim/4"
     ).split(',') if x.strip()]
+
+    # --------- CORS ----------
+    # CSV de orígenes permitidos. Por defecto '*' para compatibilidad.
+    CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(',') if o.strip()]
+
+    # --------- SSE / Logs ----------
+    MAX_SSE_LISTENERS = int(os.getenv("MAX_SSE_LISTENERS", "100"))
 
 cfg = Config()

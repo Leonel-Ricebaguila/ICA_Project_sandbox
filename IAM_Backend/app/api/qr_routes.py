@@ -2,8 +2,11 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy.orm import Session
 from ..db import db_session
 from ..models import AuthSession, Usuario
-from ..qr import verify_qr_value, hash_qr_value
+from ..qr import verify_qr_value, hash_qr_value, qr_value_fingerprint
+from ..auth import create_jwt
 from ..logging_utils import sign_event_and_persist
+from ..attempts import check_lock, register_failure
+from ..time_utils import now_cst, ensure_cst
 import datetime
 
 # Robust decoder
@@ -42,43 +45,95 @@ def scan_qr():
     with db_session() as db:  # type: Session
         sess = db.query(AuthSession).filter(AuthSession.session_id == session_id).first()
         if not sess:
+            # Loggear explícitamente el caso de sesión inexistente
+            sign_event_and_persist(db, "qr_session_not_found", actor_uid=None, source="qr_api",
+                                   context={"session_id": session_id})
             return jsonify(detail="session not found"), 404
-        if sess.expires_at < datetime.datetime.utcnow():
+        exp = ensure_cst(sess.expires_at)
+        if exp and exp < now_cst():
             sess.state = "expired"; db.commit()
-            sign_event_and_persist(db, "qr_scanned_fail", actor_uid=sess.uid, source="qr_api",
-                                   context={"session_id": sess.session_id, "reason": "session_expired"})
+            # Alerta amarilla por timeout/expiración
+            sign_event_and_persist(db, "qr_session_expired", actor_uid=sess.uid, source="qr_api",
+                                   context={"session_id": sess.session_id})
             return jsonify(detail="session expired", reason="session_expired"), 400
 
-        # Comparamos contra todos los QR activos. (Argon2 hash en base de datos)
-        users = db.query(Usuario).filter(Usuario.qr_status == "active").all()
+        # Si el usuario está bloqueado por intentos, rechazar
+        remaining = check_lock(sess.uid)
+        if remaining > 0:
+            mins = remaining // 60
+            secs = remaining % 60
+            human = f"{mins} minutos y {secs} segundos" if mins else f"{secs} segundos"
+            sign_event_and_persist(db, "login_failed_lock_active", actor_uid=sess.uid, source="qr_api",
+                                   context={"session_id": sess.session_id, "remaining_sec": remaining})
+            return jsonify(detail=f"Cuenta bloqueada. Intenta de nuevo en {human}."), 429
+
+        # 1) Fast‑path: probar primero contra el usuario de la sesión
         matched = None
-        for u in users:
-            if u.qr_value_hash and verify_qr_value(qr_value, u.qr_value_hash):
-                matched = u
-                break
+        sess_user = db.query(Usuario).filter(Usuario.uid == sess.uid).first()
+        if sess_user and getattr(sess_user, 'qr_value_hash', None):
+            try:
+                if verify_qr_value(qr_value, sess_user.qr_value_hash):
+                    matched = sess_user
+            except Exception:
+                pass
+        # 2) Si no coincide, buscar en el resto (omitir revocados si existe ese estado)
+        users = db.query(Usuario).all()
+        if not matched:
+            for u in users:
+                try:
+                    if getattr(u, "qr_status", None) == "revoked":
+                        continue
+                except Exception:
+                    pass
+                if u.qr_value_hash and verify_qr_value(qr_value, u.qr_value_hash):
+                    matched = u
+                    break
 
         if not matched:
             sess.state = "failed"; db.commit()
-            sign_event_and_persist(db, "qr_scanned_fail", actor_uid=sess.uid, source="qr_api",
-                                   context={"session_id": sess.session_id, "reason":"hash_miss"})
+            # Registrar intento fallido vinculado al UID de la sesión
+            count, _ = register_failure(sess.uid)
+            ev = "qr_scanned_fail"  # se mantiene para compatibilidad
+            sign_event_and_persist(db, ev, actor_uid=sess.uid, source="qr_api",
+                                   context={"session_id": sess.session_id, "reason":"hash_miss", "attempt": count, "fp": qr_value_fingerprint(qr_value)})
             return jsonify(detail="QR not recognized", reason="hash_miss"), 401
 
         if sess.uid != matched.uid:
             sess.state = "failed"; db.commit()
-            sign_event_and_persist(db, "qr_scanned_fail", actor_uid=matched.uid, source="qr_api",
-                                   context={"session_id": sess.session_id, "reason":"session_user_mismatch"})
+            count, _ = register_failure(sess.uid)
+            # Registro explícito de intento de usar QR ajeno
+            sign_event_and_persist(
+                db,
+                "qr_scanned_mismatch",
+                actor_uid=sess.uid,
+                source="qr_api",
+                context={
+                    "session_id": sess.session_id,
+                    "attempt": count,
+                    "expected_uid": sess.uid,
+                    "scanned_uid": matched.uid,
+                },
+            )
             return jsonify(detail="QR does not belong to logged user", reason="session_user_mismatch"), 403
 
         # Éxito → marcar sesión como completada y actualizar último acceso
         sess.state = "completed"
-        now = datetime.datetime.utcnow()
+        now = now_cst()
         matched.ultimo_acceso = now
         matched.actualizado_en = now  # si existe el campo
         db.commit()
 
         sign_event_and_persist(db, "qr_scanned_ok", actor_uid=matched.uid, source="qr_api",
                                context={"session_id": sess.session_id})
-        return jsonify(ok=True, next="done")
+        # Registrar login completado (para panel y auditoría)
+        try:
+            sign_event_and_persist(db, "login_completed", actor_uid=matched.uid, source="auth_api",
+                                   context={"via": "qr", "session_id": sess.session_id})
+        except Exception:
+            pass
+        # Emitir JWT para sesión larga en frontend
+        token = create_jwt({"uid": matched.uid, "rol": matched.rol})
+        return jsonify(ok=True, next="done", token=token)
 
 
 @bp.post("/assign")
@@ -97,14 +152,28 @@ def assign_qr():
         user = db.query(Usuario).filter(Usuario.uid == uid).first()
         if not user:
             return jsonify(detail="user not found"), 404
-        user.qr_value_hash = hash_qr_value(qr_value)
-        user.qr_card_id = qr_card_id
+        reused = False
+        if qr_value:
+            user.qr_value_hash = hash_qr_value(qr_value)
+        else:
+            if not user.qr_value_hash:
+                return jsonify(detail="qr_value requerido o usuario sin QR previo"), 400
+            reused = True
+        if qr_card_id is not None:
+            user.qr_card_id = qr_card_id
+        else:
+            # Si no se envía y está vacío, usar el UID como identificador de tarjeta por defecto
+            try:
+                if not user.qr_card_id:
+                    user.qr_card_id = user.uid
+            except Exception:
+                pass
         user.qr_status = "active"
-        user.actualizado_en = datetime.datetime.utcnow()
+        user.actualizado_en = now_cst()
         db.commit()
         sign_event_and_persist(db, "qr_assigned", actor_uid=user.uid, source="admin_api",
-                               context={"qr_card_id": user.qr_card_id})
-        return jsonify(ok=True)
+                               context={"qr_card_id": user.qr_card_id, "reused_existing": reused})
+        return jsonify(ok=True, reused_existing=reused)
 
 
 @bp.post("/revoke/<uid>")
@@ -115,10 +184,34 @@ def revoke_qr(uid: str):
         if not user:
             return jsonify(detail="user not found"), 404
         user.qr_status = "revoked"
-        user.qr_revoked_at = datetime.datetime.utcnow()
-        user.actualizado_en = datetime.datetime.utcnow()
+        user.qr_revoked_at = now_cst()
+        user.actualizado_en = now_cst()
         db.commit()
         sign_event_and_persist(db, "qr_revoked", actor_uid=user.uid, source="admin_api", context={})
+        return jsonify(ok=True)
+
+
+@bp.post("/timeout")
+def qr_timeout():
+    """Registrar expiración del tiempo de escaneo desde el cliente.
+
+    El frontend avisa cuando agota su contador sin escanear. Aquí marcamos la
+    sesión como expirada (si existe) y emitimos un evento amarillo estable
+    (qr_session_expired) para que siempre quede en la bitácora.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    session_id = data.get("session_id")
+    if not session_id:
+        return jsonify(detail="session_id required"), 400
+    with db_session() as db:  # type: Session
+        sess = db.query(AuthSession).filter(AuthSession.session_id == session_id).first()
+        if not sess:
+            return jsonify(ok=True)  # no-op
+        if sess.state != "completed":
+            sess.state = "expired"
+            db.commit()
+        sign_event_and_persist(db, "qr_session_expired", actor_uid=sess.uid, source="qr_api",
+                               context={"session_id": sess.session_id, "client": True})
         return jsonify(ok=True)
 
 

@@ -7,7 +7,7 @@
 
 const sessionId = sessionStorage.getItem('session_id');
 const timerEl   = document.getElementById('timer');
-if (!sessionId) { sessionStorage.clear(); location.replace('login.html'); }
+if (!sessionId) { sessionStorage.clear(); location.replace('login.html?msg=nosession'); }
 
 const MAX_TIME = 60;
 let countdown = MAX_TIME;
@@ -25,6 +25,15 @@ function startTimer(){
     updateTimer();
     if(countdown<=0){
       clearInterval(tHandle); stopCamera();
+      try{
+        const body = JSON.stringify({ session_id: sessionId });
+        if (navigator.sendBeacon) {
+          const blob = new Blob([body], {type:'application/json'});
+          navigator.sendBeacon('/api/qr/timeout', blob);
+        } else {
+          fetch('/api/qr/timeout', {method:'POST', headers:{'Content-Type':'application/json'}, body, keepalive:true}).catch(()=>{});
+        }
+      }catch{}
       sessionStorage.clear();
       location.replace('login.html?msg=timeout');
     }
@@ -66,20 +75,41 @@ async function verifyQR(qrval){
         clearInterval(tHandle); stopCamera(); sessionStorage.clear();
         location.replace('login.html?msg=mismatch'); return;
       }
+      if (r.status===404){ // sesión no encontrada
+        clearInterval(tHandle); stopCamera(); sessionStorage.clear();
+        location.replace('login.html?msg=nosession'); return;
+      }
       if (r.status===400 && reason==='session_expired'){
         clearInterval(tHandle); stopCamera(); sessionStorage.clear();
         location.replace('login.html?msg=timeout'); return;
+      }
+      if (r.status===401 || r.status===403){ // acceso denegado genérico
+        clearInterval(tHandle); stopCamera(); sessionStorage.clear();
+        location.replace('login.html?msg=denied'); return;
       }
       throw new Error(errDetail || 'No autorizado');
     }
     const j = await r.json();
     if(j && j.ok){
       clearInterval(tHandle); stopCamera(); aimOk(true);
-      // habilita sesión para app.html (4 horas)
+      // Sesión a nivel de navegador
       localStorage.setItem('auth_ok','true');
       localStorage.setItem('auth_expires', String(Date.now()+4*60*60*1000));
-      // uid ya estaba guardado en login.js
-      location.replace('app.html');
+      // Guardar uid para app.html
+      let uVal = null;
+      try{
+        uVal = sessionStorage.getItem('uid') || localStorage.getItem('uid') || '';
+        if (uVal) localStorage.setItem('uid', uVal);
+      }catch{}
+      // Limpiar cualquier token previo (modo sin JWT)
+      try{ localStorage.removeItem('auth_token'); }catch{}
+      // Pasar token/uid por hash como refuerzo ante orígenes/cache
+      // Redirigir pasando el UID por query (más estable que hash en algunos navegadores)
+      if (uVal) {
+        location.replace(`app.html?u=${encodeURIComponent(uVal)}`);
+      } else {
+        location.replace('app.html');
+      }
     }else{ throw new Error('QR inválido'); }
   }catch(e){ aimOk(false); msgBox.textContent = 'Error: '+e.message; }
 }

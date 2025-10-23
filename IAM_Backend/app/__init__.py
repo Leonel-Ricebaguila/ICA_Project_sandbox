@@ -10,7 +10,15 @@ def create_app():
     app = Flask(__name__, static_folder="static", static_url_path="/")
     app.config["JSON_SORT_KEYS"] = False
     app.config["MAX_CONTENT_LENGTH"] = getattr(cfg, "MAX_CONTENT_LENGTH", 15 * 1024 * 1024)
-    CORS(app)
+    # Configurar CORS con orígenes permitidos (configurable por env)
+    try:
+        origins = cfg.CORS_ORIGINS or ["*"]
+        if origins == ["*"]:
+            CORS(app)
+        else:
+            CORS(app, resources={r"/api/*": {"origins": origins}})
+    except Exception:
+        CORS(app)
 
     # Tablas y bootstrap admin
     Base.metadata.create_all(bind=engine)
@@ -50,6 +58,11 @@ def create_app():
     app.register_blueprint(nfc_bp)
     app.register_blueprint(dev_bp)
     app.register_blueprint(user_bp)
+    # Extra blueprints: messages + access log
+    from .api.messages_routes import bp as messages_bp
+    from .api.access_routes import bp as access_bp
+    app.register_blueprint(messages_bp)
+    app.register_blueprint(access_bp)
 
     @app.get("/health")
     def health():

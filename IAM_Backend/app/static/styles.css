@@ -44,3 +44,20 @@ body{
 .footer{padding:28px 16px;text-align:center;color:var(--muted);font-size:.85rem}
 hr{border:none;border-top:1px solid #e5e7eb;margin:22px 0}
 .toast{position:fixed;bottom:18px;right:18px;background:#111827;color:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);display:none}
+
+/* Log coloring */
+.log-item{padding:8px 10px;border-bottom:1px solid #e5e7eb;display:flex;gap:10px;align-items:center}
+.log-dot{width:10px;height:10px;border-radius:50%}
+.log-blue .log-dot{background:#2563eb}
+.log-green .log-dot{background:#16a34a}
+.log-yellow .log-dot{background:#ffd400} /* vivid yellow */
+.log-orange .log-dot{background:#ff6a00} /* vivid orange */
+.log-red .log-dot{background:#dc2626}
+.log-text{flex:1}
+
+/* Border-based coloring for legacy log rows */
+.log-border-blue{border-left:4px solid #2563eb;padding-left:8px}
+.log-border-green{border-left:4px solid #16a34a;padding-left:8px}
+.log-border-yellow{border-left:4px solid #ffd400;padding-left:8px}
+.log-border-orange{border-left:4px solid #ff6a00;padding-left:8px}
+.log-border-red{border-left:4px solid #dc2626;padding-left:8px}

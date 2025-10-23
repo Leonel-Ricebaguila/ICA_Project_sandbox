@@ -6,6 +6,8 @@ from .db import SessionLocal
 from .models import Evento
 from sqlalchemy import desc
 import hashlib
+from threading import Lock
+from queue import Queue
 
 SIGNING_KEY_PATH = "./ed25519_secret.hex"
 
@@ -28,7 +30,53 @@ def last_hash_prev(db):
     ev = db.query(Evento).order_by(desc(Evento.id)).first()
     return ev.hash_prev if ev else None
 
+_listeners: list[Queue] = []
+_ls_lock = Lock()
+
+def register_log_listener() -> Queue:
+    q: Queue = Queue(maxsize=1000)
+    with _ls_lock:
+        # Límite: si excede, expulsar el más antiguo
+        if len(_listeners) >= getattr(cfg, 'MAX_SSE_LISTENERS', 100):
+            try:
+                _listeners.pop(0)
+            except Exception:
+                _listeners.clear()
+        _listeners.append(q)
+    return q
+
+def unregister_log_listener(q: Queue) -> None:
+    with _ls_lock:
+        try:
+            _listeners.remove(q)
+        except ValueError:
+            pass
+
+def _broadcast_event(payload: dict) -> None:
+    with _ls_lock:
+        sinks = list(_listeners)
+    for q in sinks:
+        try:
+            q.put_nowait(payload)
+        except Exception:
+            # if queue full or closed, drop silently
+            pass
+
+def _sanitize_context(ctx):
+    try:
+        if not isinstance(ctx, dict):
+            return ctx
+        out = dict(ctx)
+        sid = out.get("session_id")
+        if isinstance(sid, str) and len(sid) >= 6:
+            out["session_id"] = "***" + sid[-6:]
+        return out
+    except Exception:
+        return ctx
+
+
 def sign_event_and_persist(db, event_name, actor_uid=None, source=None, context=None):
+    context = _sanitize_context(context)
     payload = {
         "event": event_name,
         "actor_uid": actor_uid,
@@ -50,4 +98,15 @@ def sign_event_and_persist(db, event_name, actor_uid=None, source=None, context=
     db.add(ev)
     db.commit()
     db.refresh(ev)
+    try:
+        _broadcast_event({
+            "id": ev.id,
+            "event": event_name,
+            "actor_uid": actor_uid,
+            "source": source,
+            "ts": getattr(ev, 'ts', None).isoformat() if getattr(ev, 'ts', None) else None,
+            "context": context or {},
+        })
+    except Exception:
+        pass
     return ev

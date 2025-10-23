@@ -11,7 +11,9 @@ const btn      = document.getElementById('btnLogin');
   const map = {
     timeout: 'Tiempo de autenticación agotado, vuelve a iniciar sesión.',
     loggedout: 'Sesión finalizada.',
-    mismatch: 'El QR no pertenece al usuario logueado. Vuelve a iniciar sesión.'
+    mismatch: 'El QR no pertenece al usuario logueado. Vuelve a iniciar sesión.',
+    nosession: 'Sesión no encontrada. Inicia sesión nuevamente.',
+    denied: 'Acceso denegado. Inicia sesión.'
   };
   showAlert(map[msg] || msg, msg === 'timeout' ? 'error' : 'info');
 })();

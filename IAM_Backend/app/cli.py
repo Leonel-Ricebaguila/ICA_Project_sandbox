@@ -1,6 +1,6 @@
 # app/cli.py — CLI de utilidades
 # - create-admin  → alta del usuario admin inicial
-# - create-user   → alta de usuarios por rol (R-ADM/R-MON/R-IM/R-AC/R-EMP)
+# - create-user   → alta de usuarios por rol (R-ADM/R-MON/R-IM/R-AC/R-EMP/R-GRD/R-AUD)
 # - assign-qr     → emite/rota el valor de QR y exporta PNG del código (tema UPY)
 # - qr-from-value → genera PNG del QR a partir de un valor dado (sin tocar BD)
 
@@ -15,6 +15,10 @@ from .models import Usuario
 from .auth import hash_password
 from .qr import gen_qr_value_b32, hash_qr_value, save_upy_qr_png
 from .logging_utils import sign_event_and_persist
+from .user_qr import assign_qr_to_user, resolve_outdir
+from .seed_demo import seed_demo
+from .startup import DEFAULT_ADMIN
+from .models import Usuario
 
 
 # Intentar encontrar un logo local para watermark opcional
@@ -51,6 +55,11 @@ def create_admin(uid, email, password):
         db.commit()
         sign_event_and_persist(db, "user_created", actor_uid=uid, source="cli", context={})
         print("admin created")
+        # Auto-assign QR and PNG
+        try:
+            assign_qr_to_user(uid)
+        except Exception as e:
+            print("[cli] auto-assign QR failed:", e)
     finally:
         db.close()
 
@@ -73,49 +82,52 @@ def create_user(uid, email, password, role, nombre="", apellido=""):
         db.commit()
         sign_event_and_persist(db, "user_created", actor_uid=uid, source="cli", context={"rol": role})
         print(f"user created: {uid} ({role})")
+        # Auto-assign QR and PNG
+        try:
+            assign_qr_to_user(uid)
+        except Exception as e:
+            print("[cli] auto-assign QR failed:", e)
     finally:
         db.close()
 
 def assign_qr(uid, outdir="cards", size=600):
+    """Emite/rota el QR y guarda PNG (tema UPY)."""
+    try:
+        qr_val, png_path = assign_qr_to_user(uid, outdir=outdir, size=size)
+        print("QR assigned (PRINT THIS VALUE):\n", qr_val)
+        print("Saved PNG:", png_path)
+    except Exception as e:
+        print("assign_qr failed:", e)
+
+
+def assign_qr_bulk(missing_only=True, outdir="cards", size=600):
+    """Asigna/rota QR para muchos usuarios.
+
+    - missing_only=True: solo usuarios sin `qr_value_hash`.
+    - missing_only=False: rota QR para todos los usuarios.
     """
-    Emite/rota el valor QR de un usuario y genera la imagen PNG por defecto.
-    - Genera valor nuevo (Base32) y lo guarda hasheado en BD.
-    - Siempre exporta un PNG temático UPY del código QR a la carpeta 'cards/'
-      en la raíz del proyecto, salvo que se indique --out con otra ruta.
-    """
+    # Capturamos sólo los UID para evitar problemas de instancia detach/expire
     db = SessionLocal()
     try:
-        user = db.query(Usuario).filter(Usuario.uid == uid).first()
-        if not user:
-            print("user not found")
-            return
-
-        qr_val = gen_qr_value_b32()
-        user.qr_value_hash = hash_qr_value(qr_val)
-        db.commit()
-
-        sign_event_and_persist(
-            db,
-            "qr_assigned_cli",
-            actor_uid=uid,
-            source="cli",
-            context={"qr_card_preview": qr_val[:6] + "..."},
-        )
-
-        print("QR assigned (PRINT THIS VALUE):\n", qr_val)
-
-        # Resolver carpeta de salida: por defecto 'cards/' en la raíz del repo
-        if not os.path.isabs(outdir):
-            proj_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-            outdir = os.path.join(proj_root, outdir)
-        os.makedirs(outdir, exist_ok=True)
-        logo = resolve_logo()
-        png_path = os.path.join(outdir, f"{uid}_QR.png")
-        save_upy_qr_png(png_path, qr_value=qr_val, size=int(size), logo_path=logo)
-        print("Saved PNG:", png_path)
-
+        q = db.query(Usuario.uid)
+        if missing_only:
+            q = q.filter((Usuario.qr_value_hash == None))  # noqa: E711
+        uids = [row[0] for row in q.all()]
     finally:
         db.close()
+
+    if not uids:
+        print("[assign-qr-bulk] No users matched condition.")
+        return
+    ok = 0; fail = 0
+    for uid in uids:
+        try:
+            assign_qr_to_user(uid, outdir=outdir, size=int(size))
+            ok += 1
+        except Exception as e:
+            print(f"[assign-qr-bulk] Failed {uid}: {e}")
+            fail += 1
+    print(f"[assign-qr-bulk] Done. OK={ok} FAIL={fail}")
 
 
 def qr_from_value(qr_value, outdir=".", filename="QR_custom.png", size=600):
@@ -143,7 +155,7 @@ if __name__ == "__main__":
     s1b.add_argument("--uid", required=True)
     s1b.add_argument("--email", required=True)
     s1b.add_argument("--password", required=True)
-    s1b.add_argument("--role", required=True, choices=["R-ADM","R-MON","R-IM","R-AC","R-EMP"])
+    s1b.add_argument("--role", required=True, choices=["R-ADM","R-MON","R-IM","R-AC","R-EMP","R-GRD","R-AUD"])
     s1b.add_argument("--nombre", default="")
     s1b.add_argument("--apellido", default="")
 
@@ -158,6 +170,37 @@ if __name__ == "__main__":
     s3.add_argument("--name", default="QR_custom.png", help="Nombre de archivo (p. ej., EMP-001.png)")
     s3.add_argument("--size", default=600, help="Tamaño (px) del PNG cuadrado")
 
+    s4 = sub.add_parser("seed-demo")
+    s4.add_argument(
+        "--users",
+        default=None,
+        help=(
+            "Lista separada por coma de usuarios: "
+            "uid|email|password|role|nombre|apellido,uid2|..."
+        ),
+    )
+    s4.add_argument(
+        "--users-file",
+        default=None,
+        help=(
+            "Ruta a CSV con columnas: uid,email,password,role,nombre,apellido"
+        ),
+    )
+    s4.add_argument(
+        "--update-existing",
+        action="store_true",
+        help="Si está presente, actualiza email/rol/nombre/apellido y password de usuarios existentes",
+    )
+
+    s5 = sub.add_parser("assign-qr-bulk")
+    s5.add_argument("--all", action="store_true", help="Rotar QR para TODOS los usuarios")
+    s5.add_argument("--out", default="cards", help="Carpeta para guardar PNGs de QR")
+    s5.add_argument("--size", default=600, help="Tamaño (px) del PNG cuadrado")
+
+    s6 = sub.add_parser("wipe-db")
+    s6.add_argument("--keep-uid", default=DEFAULT_ADMIN.get("uid", "ADMIN-1"), help="UID a conservar (admin)")
+    s6.add_argument("--yes", action="store_true", help="Confirmación explícita: borra todo excepto el admin indicado")
+
     args = p.parse_args()
 
     if args.cmd == "create-admin":
@@ -171,3 +214,104 @@ if __name__ == "__main__":
 
     elif args.cmd == "qr-from-value":
         qr_from_value(args.value, outdir=args.out, filename=args.name, size=args.size)
+
+    elif args.cmd == "seed-demo":
+        overrides = None
+        # Parse --users inline list
+        if args.users:
+            overrides = []
+            items = [x.strip() for x in str(args.users).split(",") if x.strip()]
+            for it in items:
+                parts = [p.strip() for p in it.split("|")]
+                if len(parts) < 6:
+                    # pad missing name/lastname if needed; require at least uid,email,password,role
+                    parts = (parts + [""] * 6)[:6]
+                uid, email, password, role, nombre, apellido = parts
+                overrides.append((uid, email, role, nombre, apellido, password))
+        # Parse --users-file CSV if provided
+        if args.users_file and not overrides:
+            import csv
+            overrides = []
+            with open(args.users_file, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    overrides.append({
+                        "uid": row.get("uid"),
+                        "email": row.get("email"),
+                        "password": row.get("password"),
+                        "role": row.get("role") or row.get("rol") or "R-EMP",
+                        "nombre": row.get("nombre", ""),
+                        "apellido": row.get("apellido", ""),
+                    })
+        seed_demo(users_override=overrides, update_existing=bool(args.update_existing))
+
+    elif args.cmd == "assign-qr-bulk":
+        assign_qr_bulk(missing_only=(not args.all), outdir=args.out, size=args.size)
+
+    elif args.cmd == "wipe-db":
+        if not args.yes:
+            print("[wipe-db] Esta operación elimina TODAS las tablas excepto el usuario admin. Repite con --yes para confirmar.")
+        else:
+            from .models import AuthSession, Evento, Mensaje, CameraDevice, QRScannerDevice, NFCDevice
+            import os
+            db = SessionLocal()
+            try:
+                # Capturar UIDs a eliminar para limpiar sus cards luego
+                del_uids = [row[0] for row in db.query(Usuario.uid).filter(Usuario.uid != args.keep_uid).all()]
+
+                # Eliminar dependientes primero
+                n_sessions = db.query(AuthSession).delete(synchronize_session=False)
+                n_events = db.query(Evento).delete(synchronize_session=False)
+                n_msgs = db.query(Mensaje).delete(synchronize_session=False)
+                n_cam = db.query(CameraDevice).delete(synchronize_session=False)
+                n_qr = db.query(QRScannerDevice).delete(synchronize_session=False)
+                n_nfc = db.query(NFCDevice).delete(synchronize_session=False)
+                # Usuarios: conservar admin solicitado
+                n_users = db.query(Usuario).filter(Usuario.uid != args.keep_uid).delete(synchronize_session=False)
+                db.commit()
+
+                # Borrar PNGs de tarjetas de usuarios eliminados y huérfanos
+                cards_dir = resolve_outdir("cards")
+                removed_png = 0
+                removed_orphan = 0
+                # 1) Remove for known deleted UIDs
+                for uid in del_uids:
+                    try:
+                        path = os.path.join(cards_dir, f"{uid}_QR.png")
+                        if os.path.exists(path):
+                            os.remove(path)
+                            removed_png += 1
+                    except Exception:
+                        pass
+                # 2) Remove any orphan PNG in cards/ that doesn't have a user in DB
+                try:
+                    remaining = {row[0] for row in db.query(Usuario.uid).all()}
+                    for name in os.listdir(cards_dir):
+                        if not name.endswith("_QR.png"):
+                            continue
+                        uid_part = name[:-7]  # strip '_QR.png'
+                        if uid_part not in remaining:
+                            fpath = os.path.join(cards_dir, name)
+                            if os.path.exists(fpath):
+                                os.remove(fpath)
+                                removed_orphan += 1
+                except Exception:
+                    pass
+
+                try:
+                    sign_event_and_persist(db, "db_wipe", actor_uid=args.keep_uid, source="cli", context={
+                        "deleted": {
+                            "auth_sessions": n_sessions,
+                            "eventos": n_events,
+                            "mensajes": n_msgs,
+                            "devices": {"cameras": n_cam, "qr_scanners": n_qr, "nfc": n_nfc},
+                            "usuarios_except_admin": n_users,
+                            "cards_png_removed": removed_png,
+                            "cards_png_orphan_removed": removed_orphan,
+                        }
+                    })
+                except Exception:
+                    pass
+                print(f"[wipe-db] OK. Eliminados usuarios(excepto {args.keep_uid})={n_users}, sesiones={n_sessions}, eventos={n_events}, mensajes={n_msgs}, cam={n_cam}, qr={n_qr}, nfc={n_nfc}, cards_png_removed={removed_png}, cards_png_orphan_removed={removed_orphan}")
+            finally:
+                db.close()

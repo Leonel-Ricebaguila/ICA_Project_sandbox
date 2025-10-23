@@ -59,7 +59,7 @@ Alembic está preconfigurado. Variables de entorno: `DATABASE_URL`.
 CLI (app/cli.py)
 ----------------
 - Crear admin inicial:
-  - `python -m app.cli create-admin --uid ADMIN-001 --email admin@local --password StrongPass123!`
+  - `python -m app.cli create-admin --uid ADMIN-1 --email admin@local --password StrongPass123!`
 - Crear usuarios por rol:
   - `python -m app.cli create-user --uid MON-001 --email mon1@local --password StrongPass123! --role R-MON`
 - Asignar QR (genera hash + PNG en cards/):
@@ -100,4 +100,3 @@ Seguridad y notas
   - Persistencia segura de llaves, HTTPS real, CSRF, endurecimiento de cabeceras.
   - Gateways de video más eficientes (FFmpeg/WebRTC) si hay muchas cámaras RTSP.
   - Eliminación/rotación de eventos y control de retención.
-
