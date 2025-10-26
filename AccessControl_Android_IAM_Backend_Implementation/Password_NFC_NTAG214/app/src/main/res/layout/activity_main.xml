@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/upy_background">
+
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginBottom="16dp"
+        android:src="@drawable/upy_center_logo"
+        android:layout_gravity="center"
+        android:contentDescription="@string/app_name" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/main_title"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/upy_primary"
+        android:layout_marginBottom="8dp"
+        android:layout_gravity="center" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="UPY CENTER SECURE SOLUTIONS"
+        android:textSize="12sp"
+        android:textStyle="normal"
+        android:textColor="@color/upy_primary_light"
+        android:layout_marginBottom="32dp"
+        android:layout_gravity="center" />
+
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/scan_instruction"
+        android:textSize="18sp"
+        android:textAlignment="center"
+        android:layout_marginBottom="32dp"
+        android:padding="16dp"
+        android:background="@drawable/status_background"
+        android:textColor="@color/upy_primary" />
+
+    <Button
+        android:id="@+id/programCardButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/program_card"
+        android:layout_marginBottom="16dp"
+        style="@style/Button.Success" />
+
+    <Button
+        android:id="@+id/stopAlarmButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Stop Alarm"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        style="@style/Button.Error" />
+
+    <Button
+        android:id="@+id/enableNfcButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enable NFC"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        style="@style/Button.Primary" />
+
+    <Button
+        android:id="@+id/logoutButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/logout"
+        android:layout_marginTop="16dp"
+        style="@style/Button.Error" />
+
+</LinearLayout>

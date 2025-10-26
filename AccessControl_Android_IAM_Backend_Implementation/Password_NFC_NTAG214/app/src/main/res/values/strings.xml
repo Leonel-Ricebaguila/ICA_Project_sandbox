@@ -1,0 +1,41 @@
+<resources>
+    <string name="app_name">UPY CENTER</string>
+    
+    <!-- Login Activity -->
+    <string name="login_title">UPY CENTER</string>
+    <string name="username_hint">Email</string>
+    <string name="password_hint">Password</string>
+    <string name="login_button">Login</string>
+    <string name="login_error">Invalid credentials</string>
+    <string name="login_loading">Authenticating...</string>
+    
+    <!-- Main Activity -->
+    <string name="main_title">NFC Access Control</string>
+    <string name="scan_instruction">Tap an NFC card to verify access</string>
+    <string name="program_card">Program New Card</string>
+    <string name="logout">Logout</string>
+    
+    <!-- Card Programming -->
+    <string name="program_title">Program New Card</string>
+    <string name="card_password_hint">Enter card password</string>
+    <string name="program_button">Program Card</string>
+    <string name="program_success">Card programmed successfully</string>
+    <string name="program_error">Failed to program card</string>
+    
+    <!-- NFC Messages -->
+    <string name="nfc_not_available">NFC is not available on this device</string>
+    <string name="nfc_not_supported">NFC not supported</string>
+    <string name="nfc_disabled">NFC is disabled. Please enable it in settings</string>
+    <string name="nfc_ready">NFC Ready - Tap a card</string>
+    <string name="nfc_scanning">Scanning NFC card...</string>
+    <string name="processing_card">Processing card...</string>
+    <string name="access_granted">Access Granted</string>
+    <string name="access_denied">Access Denied</string>
+    <string name="card_cloned">Suspicious card detected</string>
+    <string name="server_error">Server communication error</string>
+    <string name="welcome_message">Welcome to UPY CENTER</string>
+    
+    <!-- Audio -->
+    <string name="audio_permission_required">Audio permission required for notifications</string>
+</resources>
+

@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "C:\\Users\\jaque\\.gradle\\daemon\\7.6\\com.upysentinel.nfc.app-mergeDebugResources-35:\\layout\\activity_login.xml",
+        "source": "C:\\Users\\jaque\\.gradle\\daemon\\7.6\\com.upysentinel.nfc.app-main-38:\\layout\\activity_login.xml"
+    },
+    {
+        "merged": "com.upysentinel.nfc.app-mergeDebugResources-35:/layout/activity_login.xml",
+        "source": "com.upysentinel.nfc.app-main-38:/layout/activity_login.xml"
+    },
+    {
+        "merged": "C:\\Users\\jaque\\.gradle\\daemon\\7.6\\com.upysentinel.nfc.app-mergeDebugResources-35:\\layout\\activity_main.xml",
+        "source": "C:\\Users\\jaque\\.gradle\\daemon\\7.6\\com.upysentinel.nfc.app-main-38:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "C:\\Users\\jaque\\.gradle\\daemon\\7.6\\com.upysentinel.nfc.app-mergeDebugResources-35:\\layout\\activity_card_programming.xml",
+        "source": "C:\\Users\\jaque\\.gradle\\daemon\\7.6\\com.upysentinel.nfc.app-main-38:\\layout\\activity_card_programming.xml"
+    }
+]

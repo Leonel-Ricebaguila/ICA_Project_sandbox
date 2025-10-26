@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- UPY CENTER Brand Colors -->
+    <color name="upy_primary">#FF2A404D</color>
+    <color name="upy_primary_dark">#FF1E2D35</color>
+    <color name="upy_primary_light">#FF4A5A67</color>
+    <color name="upy_background">#FFEAEAEA</color>
+    <color name="upy_background_dark">#FFD0D0D0</color>
+    
+    <!-- Standard colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Functional colors -->
+    <color name="success_green">#FF4CAF50</color>
+    <color name="error_red">#FFF44336</color>
+    <color name="warning_orange">#FFFF9800</color>
+    
+    <!-- Legacy colors for compatibility -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="primary_blue">#FF2196F3</color>
+    <color name="dark_gray">#FF2A404D</color>
+    <color name="light_gray">#FFEAEAEA</color>
+    
+    <!-- Status colors -->
+    <color name="success_color">#FF4CAF50</color>
+    <color name="error_color">#FFF44336</color>
+</resources>
+

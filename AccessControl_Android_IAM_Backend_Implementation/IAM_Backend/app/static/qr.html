@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Verificación QR • UPY Center</title>
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    #scannerBlock{display:none;margin-top:10px;position:relative}
+    #video{width:100%;border-radius:10px;display:block;max-height:420px;object-fit:cover}
+    /* Marco cuadrado sin texto; tamaño lo fija JS para que sea perfecto */
+    #aimBox{
+      position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+      border:3px dashed #94a3b8;border-radius:14px;
+      background:transparent;pointer-events:none;
+      width:200px;height:200px; /* valor inicial, luego JS recalcula */
+    }
+    #aimBox.ok{border-color:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.15) inset}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img class="logo" src="favicon-512.png" alt="UPY Center">
+    <div>
+      <div class="title">UPY CENTER</div>
+      <div class="subtitle">Escanea tu tarjeta (60s)</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="card" style="max-width:760px;margin:0 auto">
+      <div style="display:flex;gap:16px;align-items:center;justify-content:space-between">
+        <div>
+          <button id="btnCamOn"  class="btn">Activar cámara</button>
+          <button id="btnCamOff" class="btn btn-ghost" disabled>Detener cámara</button>
+          <label class="btn btn-ghost">
+            Tomar foto
+            <input id="fileInput" type="file" accept="image/*" capture="environment" style="display:none">
+          </label>
+        </div>
+        <div>
+          <div class="badge">Tiempo restante</div>
+          <div class="timer" id="timer" style="font-size:2rem">60:00</div>
+        </div>
+      </div>
+
+      <div id="scannerBlock">
+        <video id="video" playsinline></video>
+        <div id="aimBox" aria-hidden="true"></div>
+      </div>
+
+      <div id="compatMsg" class="muted" style="margin-top:10px"></div>
+      <div id="msg" class="muted" style="margin-top:6px"></div>
+    </div>
+  </div>
+
+  <div class="footer">© UPY Center – Secure Solutions</div>
+
+  <script src="qr.js"></script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+═══════════════════════════════════════════════════════════════
+IAM_BACKEND NFC IMPLEMENTATION - QUICK CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+📋 USE THIS CHECKLIST AS YOU IMPLEMENT
+
+Print this and check off each item as you complete it!
+
+═══════════════════════════════════════════════════════════════
+PREPARATION
+═══════════════════════════════════════════════════════════════
+
+[ ] 1. Backup database (cp iam.db iam.db.backup)
+[ ] 2. Review README.md
+[ ] 3. Read 07_step_by_step.md
+[ ] 4. Have all 7 files from package ready
+
+═══════════════════════════════════════════════════════════════
+PHASE 1: DATABASE MODELS (10 min)
+═══════════════════════════════════════════════════════════════
+
+[ ] 5. Open app/models.py
+[ ] 6. Find class Usuario(Base)
+[ ] 7. Add 6 NFC fields to Usuario (nfc_uid, nfc_uid_hash, etc.)
+[ ] 8. Find class NFCDevice(Base)
+[ ] 9. Add 6 device fields to NFCDevice (device_id, device_secret, etc.)
+[ ] 10. Check imports (Column, String, DateTime, JSON, now_cst)
+[ ] 11. Save models.py
+[ ] 12. ✅ VERIFY: python -c "from app.models import Usuario; print('OK')"
+
+═══════════════════════════════════════════════════════════════
+PHASE 2: DATABASE MIGRATION (15 min)
+═══════════════════════════════════════════════════════════════
+
+[ ] 13. Choose migration method (Alembic or Manual SQL)
+[ ] 14. Run migration script
+[ ] 15. ⚠️  SAVE device secrets if shown!
+[ ] 16. ✅ VERIFY: Check columns exist in database
+
+═══════════════════════════════════════════════════════════════
+PHASE 3: API ROUTES (10 min)
+═══════════════════════════════════════════════════════════════
+
+[ ] 17. Create app/api/ folder if needed
+[ ] 18. Copy 01_nfc_routes.py to app/api/nfc_routes.py
+[ ] 19. Install PyJWT: pip install PyJWT
+[ ] 20. Open app/__init__.py
+[ ] 21. Add import: from .api import nfc_routes
+[ ] 22. Add register: app.register_blueprint(nfc_routes.bp)
+[ ] 23. Set JWT_SECRET_KEY in .env
+[ ] 24. Restart Flask server
+[ ] 25. ✅ VERIFY: curl -k https://localhost:5443/api/nfc_devices/config
+
+═══════════════════════════════════════════════════════════════
+PHASE 4: CLI COMMANDS (10 min)
+═══════════════════════════════════════════════════════════════
+
+[ ] 26. Open app/cli.py
+[ ] 27. Copy functions from 04_cli_additions.py
+[ ] 28. Add command decorators if using Click
+[ ] 29. ✅ VERIFY: python -m app.cli --help
+
+═══════════════════════════════════════════════════════════════
+PHASE 5: BASIC TESTING (15 min)
+═══════════════════════════════════════════════════════════════
+
+[ ] 30. Register test device
+        python -m app.cli register-nfc-device --name "Test" --location "Lab"
+[ ] 31. ⚠️  SAVE device_id and device_secret from output
+[ ] 32. Test device auth (curl POST /api/nfc_devices/auth)
+[ ] 33. ⚠️  SAVE JWT token from response
+[ ] 34. Create test user (TEST-001)
+[ ] 35. Assign NFC card to user
+[ ] 36. Test NFC scan (curl POST /api/nfc/scan)
+[ ] 37. ✅ VERIFY: Response shows "result": "granted"
+
+═══════════════════════════════════════════════════════════════
+PHASE 6: FULL TESTING (20 min)
+═══════════════════════════════════════════════════════════════
+
+Run all 12 tests from 06_testing_guide.md:
+
+[ ] 38. Test 1: Server health check
+[ ] 39. Test 2: NFC config endpoint
+[ ] 40. Test 3: Register NFC device
+[ ] 41. Test 4: Device authentication
+[ ] 42. Test 5: Create test user
+[ ] 43. Test 6: NFC scan - granted
+[ ] 44. Test 7: NFC scan - denied
+[ ] 45. Test 8: Heartbeat
+[ ] 46. Test 9: Device info
+[ ] 47. Test 10: Revoke NFC card
+[ ] 48. Test 11: Batch scan
+[ ] 49. Test 12: Check audit trail
+
+═══════════════════════════════════════════════════════════════
+PHASE 7: FINAL VERIFICATION
+═══════════════════════════════════════════════════════════════
+
+[ ] 50. Check database has 12 new fields
+[ ] 51. Check Flask server runs without errors
+[ ] 52. Check at least 3 NFC events in eventos table
+[ ] 53. Check web interface shows NFC events
+[ ] 54. List NFC devices (CLI)
+[ ] 55. List NFC users (CLI)
+
+═══════════════════════════════════════════════════════════════
+✅ COMPLETION CRITERIA
+═══════════════════════════════════════════════════════════════
+
+All items checked? You should have:
+
+✅ 12 new database fields (6 Usuario, 6 NFCDevice)
+✅ 8 new API endpoints working
+✅ 6 new CLI commands working
+✅ JWT authentication functioning
+✅ NFC scans granting/denying access
+✅ Events logged to database
+✅ No errors in server console
+✅ All 12 tests passing
+
+═══════════════════════════════════════════════════════════════
+📊 IMPLEMENTATION SUMMARY
+═══════════════════════════════════════════════════════════════
+
+Started:     ________________  Time: _______
+Completed:   ________________  Time: _______
+Duration:    ________________  (Target: 60 min)
+
+Implementer: _________________________________
+Date:        _________________________________
+
+Notes:
+________________________________________________________________
+________________________________________________________________
+________________________________________________________________
+
+═══════════════════════════════════════════════════════════════
+🎉 CONGRATULATIONS!
+═══════════════════════════════════════════════════════════════
+
+Your IAM_Backend now has complete NFC support!
+
+Next steps:
+1. Configure Android app with server URL
+2. Enter device credentials in Android app
+3. Test with real NFC cards
+4. Monitor audit trail
+5. Deploy to production
+
+═══════════════════════════════════════════════════════════════
+
+Sign-off:
+
+Implementation completed by: _________________________________
+
+Tested and verified by: _________________________________
+
+Approved for production by: _________________________________
+
+Date: _________________________________
+
+═══════════════════════════════════════════════════════════════
+END OF CHECKLIST
+═══════════════════════════════════════════════════════════════
+
+

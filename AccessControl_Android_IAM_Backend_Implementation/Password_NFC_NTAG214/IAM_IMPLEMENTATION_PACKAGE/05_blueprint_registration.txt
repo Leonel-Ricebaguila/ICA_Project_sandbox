@@ -1,0 +1,144 @@
+============================================================
+BLUEPRINT REGISTRATION INSTRUCTIONS
+============================================================
+
+File to modify: app/__init__.py (or wherever Flask app is created)
+
+Add these TWO lines to register the NFC routes blueprint:
+
+============================================================
+STEP 1: ADD IMPORT
+============================================================
+
+Find the section where blueprints are imported (near the top of the file).
+
+Add this line with the other blueprint imports:
+
+from .api import nfc_routes
+
+Example:
+--------
+from flask import Flask
+from .api import auth_routes, user_routes, admin_routes
+from .api import nfc_routes  # ← ADD THIS LINE
+from .config import Config
+
+============================================================
+STEP 2: REGISTER BLUEPRINT
+============================================================
+
+Find the section where blueprints are registered (in create_app() function).
+
+Add this line with the other blueprint registrations:
+
+app.register_blueprint(nfc_routes.bp)
+
+Example:
+--------
+def create_app():
+    app = Flask(__name__)
+    
+    # ... app configuration ...
+    
+    # Register blueprints
+    app.register_blueprint(auth_routes.bp)
+    app.register_blueprint(user_routes.bp)
+    app.register_blueprint(admin_routes.bp)
+    app.register_blueprint(nfc_routes.bp)  # ← ADD THIS LINE
+    app.register_blueprint(devices_routes.bp)
+    # ... other blueprints ...
+    
+    return app
+
+============================================================
+COMPLETE EXAMPLE
+============================================================
+
+Before:
+-------
+from flask import Flask
+from .api import auth_routes, user_routes, admin_routes
+from .config import Config
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    
+    # Register blueprints
+    app.register_blueprint(auth_routes.bp)
+    app.register_blueprint(user_routes.bp)
+    app.register_blueprint(admin_routes.bp)
+    
+    return app
+
+
+After:
+------
+from flask import Flask
+from .api import auth_routes, user_routes, admin_routes
+from .api import nfc_routes  # ← ADDED
+from .config import Config
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    
+    # Register blueprints
+    app.register_blueprint(auth_routes.bp)
+    app.register_blueprint(user_routes.bp)
+    app.register_blueprint(admin_routes.bp)
+    app.register_blueprint(nfc_routes.bp)  # ← ADDED
+    
+    return app
+
+============================================================
+VERIFICATION
+============================================================
+
+After adding these lines:
+
+1. Restart Flask server
+2. Check for errors in console
+3. Test health check: curl http://localhost:5443/health
+4. Test NFC config endpoint: curl http://localhost:5443/api/nfc_devices/config
+
+Expected output from config endpoint:
+{
+  "heartbeat_interval": 30,
+  "scan_timeout": 5,
+  "offline_queue_max": 1000,
+  "features": {
+    "offline_mode": true,
+    "batch_sync": true,
+    "biometric_auth": false,
+    "location_tracking": true
+  },
+  "server_time": "2025-10-26T..."
+}
+
+If you see this, the blueprint is registered correctly! ✅
+
+============================================================
+TROUBLESHOOTING
+============================================================
+
+Error: "ImportError: cannot import name 'nfc_routes'"
+Solution: Make sure 01_nfc_routes.py is copied to app/api/nfc_routes.py
+
+Error: "AttributeError: module 'nfc_routes' has no attribute 'bp'"
+Solution: Check that nfc_routes.py has: bp = Blueprint("nfc", ...)
+
+Error: "No module named 'jwt'"
+Solution: Install PyJWT: pip install PyJWT
+
+============================================================
+THAT'S IT!
+============================================================
+
+Only TWO lines to add:
+1. Import: from .api import nfc_routes
+2. Register: app.register_blueprint(nfc_routes.bp)
+
+Simple! ✅
+
+
